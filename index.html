@@ -1,27 +1,71 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>Repository Directory Structure</title>
     <style>
+        body {
+            background-color: #1e1e1e;
+            color: #c7c7c7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #ffffff;
+        }
+
         ul {
             list-style-type: none;
+            padding-left: 20px;
+            margin: 0;
         }
+
         li {
-            margin-left: 20px;
+            position: relative;
+            margin: 5px 0;
         }
+
+        .folder>span {
+            cursor: pointer;
+            user-select: none;
+        }
+
         .folder::before {
-            content: "📁 ";
+            content: "▶";
+            position: absolute;
+            left: -15px;
+            color: #c7c7c7;
+            transform: rotate(0deg);
+            transition: transform 0.2s;
         }
+
+        .folder.expanded::before {
+            transform: rotate(90deg);
+        }
+
         .file::before {
-            content: "📄 ";
+            content: "📄";
+            margin-right: 5px;
         }
+
         a {
             text-decoration: none;
-            color: #0366d6;
+            color: #9cdcfe;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
+
 <body>
     <h1>Repository Directory Structure</h1>
     <div id="directory-structure"></div>
@@ -50,6 +94,7 @@
             if (!items) return;
 
             const ul = document.createElement('ul');
+            ul.classList.add('hidden'); // Start hidden
             parentElement.appendChild(ul);
 
             for (const item of items) {
@@ -59,8 +104,21 @@
 
                 if (item.type === 'dir') {
                     li.classList.add('folder');
-                    li.textContent = name;
+                    const span = document.createElement('span');
+                    span.textContent = name;
+                    li.appendChild(span);
                     ul.appendChild(li);
+
+                    // Event listener to toggle visibility
+                    span.addEventListener('click', () => {
+                        li.classList.toggle('expanded');
+                        const childUl = li.querySelector('ul');
+                        if (childUl) {
+                            childUl.classList.toggle('hidden');
+                        }
+                    });
+
+                    // Build the subtree
                     await buildTree(li, itemPath);
                 } else if (item.type === 'file') {
                     li.classList.add('file');
@@ -76,8 +134,25 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const rootElement = document.getElementById('directory-structure');
-            buildTree(rootElement);
+            const rootLi = document.createElement('li');
+            rootLi.classList.add('folder');
+            const rootSpan = document.createElement('span');
+            rootSpan.textContent = repository;
+            rootLi.appendChild(rootSpan);
+            rootElement.appendChild(rootLi);
+
+            // Event listener for root folder
+            rootSpan.addEventListener('click', () => {
+                rootLi.classList.toggle('expanded');
+                const childUl = rootLi.querySelector('ul');
+                if (childUl) {
+                    childUl.classList.toggle('hidden');
+                }
+            });
+
+            buildTree(rootLi);
         });
     </script>
 </body>
+
 </html>
