@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Repository Directory Structure</title>
+    <style>
+        ul {
+            list-style-type: none;
+        }
+        li {
+            margin-left: 20px;
+        }
+        .folder::before {
+            content: "📁 ";
+        }
+        .file::before {
+            content: "📄 ";
+        }
+        a {
+            text-decoration: none;
+            color: #0366d6;
+        }
+    </style>
+</head>
+<body>
+    <h1>Repository Directory Structure</h1>
+    <div id="directory-structure"></div>
+
+    <script>
+        const username = 'lanl2tz';
+        const repository = 'lanl2tz.github.io';
+        const branch = 'main'; // Change to your default branch if not 'main'
+
+        async function fetchDirectory(path = '') {
+            const apiUrl = `https://api.github.com/repos/${username}/${repository}/contents/${path}?ref=${branch}`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`Error fetching ${path}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function buildTree(parentElement, path = '') {
+            const items = await fetchDirectory(path);
+            if (!items) return;
+
+            const ul = document.createElement('ul');
+            parentElement.appendChild(ul);
+
+            for (const item of items) {
+                const li = document.createElement('li');
+                const name = item.name;
+                const itemPath = item.path;
+
+                if (item.type === 'dir') {
+                    li.classList.add('folder');
+                    li.textContent = name;
+                    ul.appendChild(li);
+                    await buildTree(li, itemPath);
+                } else if (item.type === 'file') {
+                    li.classList.add('file');
+                    const a = document.createElement('a');
+                    a.href = `https://github.com/${username}/${repository}/blob/${branch}/${itemPath}`;
+                    a.target = '_blank';
+                    a.textContent = name;
+                    li.appendChild(a);
+                    ul.appendChild(li);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const rootElement = document.getElementById('directory-structure');
+            buildTree(rootElement);
+        });
+    </script>
+</body>
+</html>
