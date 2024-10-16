@@ -1,59 +1,42 @@
+<?php
+function listDirectory($dir, $prefix = '') {
+    $files = scandir($dir);
+    foreach ($files as $key => $value) {
+        if (!in_array($value, array('.', '..'))) {
+            $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
+            if (is_dir($path)) {
+                echo $prefix . '<strong>' . $value . '</strong><br>';
+                listDirectory($path, $prefix . '&nbsp;&nbsp;&nbsp;');
+            } else {
+                echo $prefix . $value . '<br>';
+            }
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="UTF-8">
-    <title>Directory Structure Viewer</title>
+    <title>Server Directory Structure</title>
     <style>
-        ul {
-            list-style-type: none;
+        body {
+            font-family: Arial, sans-serif;
         }
 
-        li::before {
-            content: "• ";
-        }
-
-        .folder {
-            font-weight: bold;
+        strong {
+            color: #2a7ae2;
         }
     </style>
 </head>
 
 <body>
-    <h1>Directory Structure Viewer</h1>
-    <button id="select-dir">Select Directory</button>
-    <div id="directory-structure"></div>
-
-    <script>
-        const selectDirButton = document.getElementById('select-dir');
-        const dirStructureDiv = document.getElementById('directory-structure');
-
-        selectDirButton.addEventListener('click', async () => {
-            if ('showDirectoryPicker' in window) {
-                const dirHandle = await window.showDirectoryPicker();
-                const ul = document.createElement('ul');
-                await traverseDirectory(dirHandle, ul);
-                dirStructureDiv.innerHTML = '';
-                dirStructureDiv.appendChild(ul);
-            } else {
-                alert('The File System Access API is not supported in this browser.');
-            }
-        });
-
-        async function traverseDirectory(dirHandle, parentElement) {
-            for await (const [name, handle] of dirHandle.entries()) {
-                const li = document.createElement('li');
-                li.textContent = name;
-                if (handle.kind === 'directory') {
-                    li.classList.add('folder');
-                    const ul = document.createElement('ul');
-                    await traverseDirectory(handle, ul);
-                    li.appendChild(ul);
-                }
-                parentElement.appendChild(li);
-            }
-        }
-    </script>
+    <h1>Server Directory Structure</h1>
+    <?php
+        // Change the parameter of listDirectory() to the directory you want to start from
+        listDirectory(__DIR__);
+    ?>
 </body>
 
 </html>
