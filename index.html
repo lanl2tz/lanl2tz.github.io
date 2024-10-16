@@ -1,1 +1,59 @@
-Hello World
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Directory Structure Viewer</title>
+    <style>
+        ul {
+            list-style-type: none;
+        }
+
+        li::before {
+            content: "• ";
+        }
+
+        .folder {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Directory Structure Viewer</h1>
+    <button id="select-dir">Select Directory</button>
+    <div id="directory-structure"></div>
+
+    <script>
+        const selectDirButton = document.getElementById('select-dir');
+        const dirStructureDiv = document.getElementById('directory-structure');
+
+        selectDirButton.addEventListener('click', async () => {
+            if ('showDirectoryPicker' in window) {
+                const dirHandle = await window.showDirectoryPicker();
+                const ul = document.createElement('ul');
+                await traverseDirectory(dirHandle, ul);
+                dirStructureDiv.innerHTML = '';
+                dirStructureDiv.appendChild(ul);
+            } else {
+                alert('The File System Access API is not supported in this browser.');
+            }
+        });
+
+        async function traverseDirectory(dirHandle, parentElement) {
+            for await (const [name, handle] of dirHandle.entries()) {
+                const li = document.createElement('li');
+                li.textContent = name;
+                if (handle.kind === 'directory') {
+                    li.classList.add('folder');
+                    const ul = document.createElement('ul');
+                    await traverseDirectory(handle, ul);
+                    li.appendChild(ul);
+                }
+                parentElement.appendChild(li);
+            }
+        }
+    </script>
+</body>
+
+</html>
