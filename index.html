@@ -2,157 +2,244 @@
 <html>
 
 <head>
-    <link rel="shortcut icon" type="image/x-icon" href="algomol_transparent.png">
     <meta charset="UTF-8">
-    <title>Repository Directory Structure</title>
+    <title>lanl2tz</title>
     <style>
-        body {
-            background-color: #1e1e1e;
-            color: #c7c7c7;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        #webgpu-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        .content {
+            position: relative;
+            padding: 2rem;
+            height: 100vh;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5));
+            backdrop-filter: blur(10px);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #64ffda;
+        }
+
+        .hero {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
         }
 
         h1 {
-            color: #ffffff;
+            font-size: 4rem;
+            margin-bottom: 1rem;
         }
 
-        ul {
-            list-style-type: none;
-            padding-left: 20px;
-            margin: 0;
+        .subtitle {
+            font-size: 1.5rem;
+            color: #64ffda;
         }
 
-        li {
-            position: relative;
-            margin: 5px 0;
-        }
-
-        .folder>span {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .folder::before {
-            content: "▶";
-            position: absolute;
-            left: -15px;
-            color: #c7c7c7;
-            transform: rotate(0deg);
-            transition: transform 0.2s;
-        }
-
-        .folder.expanded::before {
-            transform: rotate(90deg);
-        }
-
-        .file::before {
-            content: "📄";
-            margin-right: 5px;
-        }
-
-        a {
-            text-decoration: none;
-            color: #9cdcfe;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .hidden {
-            display: none;
+        .logo img {
+            height: 40px;
+            width: auto;
+            display: block;
         }
     </style>
 </head>
 
 <body>
-    <h1>Repository Directory Structure</h1>
-    <div id="directory-structure"></div>
-
+    <canvas id="webgpu-canvas"></canvas>
+    <div class="content">
+        <nav>
+            <div class="logo">
+                <img src="resource/logo/identicon.png" alt="Logo">
+            </div>
+            <div>
+                <a href="#about">About</a>
+                <a href="#projects">Projects</a>
+                <a href="#contact">Contact</a>
+            </div>
+        </nav>
+        <div class="hero">
+            <h1>lanl2tz</h1>
+            <p class="subtitle">Interactive Graphics & Modern Web Design</p>
+        </div>
+    </div>
     <script>
-        const username = 'lanl2tz';
-        const repository = 'lanl2tz.github.io';
-        const branch = 'main'; // Change to your default branch if not 'main'
-
-        async function fetchDirectory(path = '') {
-            const apiUrl = `https://api.github.com/repos/${username}/${repository}/contents/${path}?ref=${branch}`;
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`Error fetching ${path}: ${response.statusText}`);
-                }
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error(error);
+        async function init() {
+            if (!navigator.gpu) {
+                document.body.innerHTML = '<div style="padding: 2rem; color: white;">WebGPU is not supported in your browser.</div>';
+                return;
             }
-        }
 
-        async function buildTree(parentElement, path = '') {
-            const items = await fetchDirectory(path);
-            if (!items) return;
+            const adapter = await navigator.gpu.requestAdapter();
+            const device = await adapter.requestDevice();
 
-            const ul = document.createElement('ul');
-            ul.classList.add('hidden'); // Start hidden
-            parentElement.appendChild(ul);
+            const canvas = document.querySelector("#webgpu-canvas");
+            const context = canvas.getContext("webgpu");
+            const format = navigator.gpu.getPreferredCanvasFormat();
 
-            for (const item of items) {
-                const li = document.createElement('li');
-                const name = item.name;
-                const itemPath = item.path;
-
-                if (item.type === 'dir') {
-                    li.classList.add('folder');
-                    const span = document.createElement('span');
-                    span.textContent = name;
-                    li.appendChild(span);
-                    ul.appendChild(li);
-
-                    // Event listener to toggle visibility
-                    span.addEventListener('click', () => {
-                        li.classList.toggle('expanded');
-                        const childUl = li.querySelector('ul');
-                        if (childUl) {
-                            childUl.classList.toggle('hidden');
-                        }
-                    });
-
-                    // Build the subtree
-                    await buildTree(li, itemPath);
-                } else if (item.type === 'file') {
-                    li.classList.add('file');
-                    const a = document.createElement('a');
-                    a.href = `https://github.com/${username}/${repository}/blob/${branch}/${itemPath}`;
-                    a.target = '_blank';
-                    a.textContent = name;
-                    li.appendChild(a);
-                    ul.appendChild(li);
-                }
+            // Handle canvas resize
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                context.configure({
+                    device,
+                    format,
+                    alphaMode: "premultiplied",
+                });
             }
-        }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const rootElement = document.getElementById('directory-structure');
-            const rootLi = document.createElement('li');
-            rootLi.classList.add('folder');
-            const rootSpan = document.createElement('span');
-            rootSpan.textContent = repository;
-            rootLi.appendChild(rootSpan);
-            rootElement.appendChild(rootLi);
+            // Create animated background shader
+            const shader = device.createShaderModule({
+                code: `
+                    @binding(0) @group(0) var<uniform> time: f32;
+                    @binding(1) @group(0) var<uniform> resolution: vec2f;
 
-            // Event listener for root folder
-            rootSpan.addEventListener('click', () => {
-                rootLi.classList.toggle('expanded');
-                const childUl = rootLi.querySelector('ul');
-                if (childUl) {
-                    childUl.classList.toggle('hidden');
+                    @vertex fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+                        var pos = array<vec2f, 6>(
+                            vec2f(-1.0, -1.0),
+                            vec2f( 1.0, -1.0),
+                            vec2f(-1.0,  1.0),
+                            vec2f(-1.0,  1.0),
+                            vec2f( 1.0, -1.0),
+                            vec2f( 1.0,  1.0)
+                        );
+                        return vec4f(pos[vertexIndex], 0.0, 1.0);
+                    }
+
+                    @fragment fn fs(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+                        let uv = pos.xy / resolution;
+                        let color = 0.5 + 0.5 * cos(time + uv.xyx + vec3f(0.0, 2.0, 4.0));
+                        return vec4f(color, 1.0);
+                    }
+                `
+            });
+
+            // Create uniform buffers
+            const timeBuffer = device.createBuffer({
+                size: 4,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+
+            const resolutionBuffer = device.createBuffer({
+                size: 8,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+
+            // Update resolution
+            device.queue.writeBuffer(
+                resolutionBuffer,
+                0,
+                new Float32Array([canvas.width, canvas.height])
+            );
+
+            // Create pipeline and bind group
+            const bindGroupLayout = device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        buffer: { type: "uniform" }
+                    },
+                    {
+                        binding: 1,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        buffer: { type: "uniform" }
+                    }
+                ]
+            });
+
+            const pipeline = device.createRenderPipeline({
+                layout: device.createPipelineLayout({
+                    bindGroupLayouts: [bindGroupLayout]
+                }),
+                vertex: {
+                    module: shader,
+                    entryPoint: "vs"
+                },
+                fragment: {
+                    module: shader,
+                    entryPoint: "fs",
+                    targets: [{ format }]
                 }
             });
 
-            buildTree(rootLi);
-        });
+            const bindGroup = device.createBindGroup({
+                layout: bindGroupLayout,
+                entries: [
+                    {
+                        binding: 0,
+                        resource: { buffer: timeBuffer }
+                    },
+                    {
+                        binding: 1,
+                        resource: { buffer: resolutionBuffer }
+                    }
+                ]
+            });
+
+            function frame() {
+                const time = performance.now() / 1000;
+                device.queue.writeBuffer(timeBuffer, 0, new Float32Array([time]));
+
+                const commandEncoder = device.createCommandEncoder();
+                const pass = commandEncoder.beginRenderPass({
+                    colorAttachments: [{
+                        view: context.getCurrentTexture().createView(),
+                        clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                        loadOp: "clear",
+                        storeOp: "store"
+                    }]
+                });
+
+                pass.setPipeline(pipeline);
+                pass.setBindGroup(0, bindGroup);
+                pass.draw(6);
+                pass.end();
+
+                device.queue.submit([commandEncoder.finish()]);
+                requestAnimationFrame(frame);
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        init().catch(console.error);
     </script>
 </body>
 
